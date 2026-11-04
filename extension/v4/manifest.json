@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "tag-to-json Inspector",
+  "version": "4.0.0",
+  "description": "Extract full HTML pages or selected element IDs into clean json-to-tag declarative specifications.",
+  "icons": {
+    "48": "icons/KSIcon-48.png",
+    "96": "icons/KSIcon-96.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "48": "icons/KSIcon-48.png",
+      "96": "icons/KSIcon-96.png"
+    },
+    "default_title": "tag-to-json Inspector"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/injectStart.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/tagToJson.min.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "tag-to-json@keshavsoft.com",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ],
+        "optional": []
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "120.0"
+    }
+  }
+}

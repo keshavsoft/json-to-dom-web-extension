@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tag-to-json Inspector</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="brand">
+        <span class="logo-badge">KS</span>
+        <div class="title-group">
+          <h1>tag-to-json</h1>
+          <span class="version-tag">v5.0</span>
+        </div>
+      </div>
+      <span class="status-indicator" id="statusBadge">Ready</span>
+    </header>
+
+    <!-- Main Form -->
+    <main class="popup-body">
+      <!-- Full Page 1-Click Action -->
+      <section class="quick-action-section">
+        <button id="btnDownloadFullPage" class="btn btn-hero">
+          <span class="btn-icon">🌐</span> Download Full Page HTML Spec
+        </button>
+      </section>
+
+      <div class="divider">
+        <span>OR TARGET SPECIFIC ELEMENT</span>
+      </div>
+
+      <label for="idSelect" class="input-label">Select Element ID from Active Tab:</label>
+
+      <div class="select-wrapper">
+        <select id="idSelect" class="form-select">
+          <option value="" disabled selected>Scanning page elements...</option>
+        </select>
+        <button id="btnRefresh" class="btn-refresh" title="Rescan IDs">↻</button>
+      </div>
+
+      <div class="filter-wrapper">
+        <input type="text" id="filterInput" class="form-input" placeholder="Quick filter IDs (e.g. table, header)..." />
+      </div>
+
+      <div class="stats-bar" id="statsBar">
+        <span id="elementCount">Found 0 elements with ID</span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="actions-group">
+        <button id="btnDownload" class="btn btn-primary" disabled>
+          <span class="btn-icon">💾</span> Download Selected Element Spec
+        </button>
+        <button id="btnCopy" class="btn btn-secondary" disabled>
+          <span class="btn-icon">📋</span> Copy Selected Spec
+        </button>
+      </div>
+
+      <div id="feedbackMessage" class="feedback-msg"></div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <span>Compatible with <strong>@keshavsoft/json-to-tag</strong></span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DOM to JSON Spec - Minimal Prototype Demo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    pre {
+      background: #1e1e2e;
+      color: #a6accd;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      max-height: 400px;
+    }
+  </style>
+</head>
+
+<body class="bg-light py-4">
+  <div class="container" style="max-width: 900px;">
+    <h3 class="fw-bold mb-3">DOM to JSON Spec: Minimal Demonstration</h3>
+    <p class="text-muted">A small sample HTML table reversed back into a declarative JSON specification.</p>
+
+    <div class="card mb-4">
+      <div class="card-header fw-bold bg-white">1. Source Live DOM Element (Sample Table)</div>
+      <div class="card-body">
+        <div id="sample-table-wrapper">
+          <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+              <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Sugar</td>
+                <td>10 kg</td>
+                <td>45</td>
+              </tr>
+              <tr>
+                <td>Wheat</td>
+                <td>25 kg</td>
+                <td>30</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <button id="btn-reverse" class="btn btn-primary">🔄 Reverse DOM to JSON Spec</button>
+      <button id="btn-roundtrip" class="btn btn-success ms-2">🔁 Round-Trip: Spec back to DOM via json-to-tag</button>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header fw-bold bg-white">2. Reversed JSON Specification (tag-to-json output)</div>
+      <div class="card-body p-0">
+        <pre id="output-json" class="m-0">// Click the button above to reverse the DOM</pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header fw-bold bg-white">3. Round-Trip Target Container (Rebuilt DOM)</div>
+      <div class="card-body">
+        <div id="roundtrip-container" class="text-muted">Will render reconstructed DOM here...</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { tagToJson } from "./src/index.js";
+    import { buildSpecElement } from "../json-to-tag/src/v4/index.js";
+
+    let lastSpec = null;
+
+    document.getElementById("btn-reverse").addEventListener("click", () => {
+      const sourceEl = document.querySelector("#sample-table-wrapper table");
+      lastSpec = tagToJson({ inElement: sourceEl });
+      document.getElementById("output-json").textContent = JSON.stringify(lastSpec, null, 2);
+    });
+
+    document.getElementById("btn-roundtrip").addEventListener("click", () => {
+      if (!lastSpec) {
+        const sourceEl = document.querySelector("#sample-table-wrapper table");
+        lastSpec = tagToJson({ inElement: sourceEl });
+        document.getElementById("output-json").textContent = JSON.stringify(lastSpec, null, 2);
+      }
+
+      const container = document.getElementById("roundtrip-container");
+      container.innerHTML = "";
+      const recreatedEl = buildSpecElement({ inSpec: lastSpec });
+      container.appendChild(recreatedEl);
+    });
+  </script>
+</body>
+
+</html>
