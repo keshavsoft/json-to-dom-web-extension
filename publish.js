@@ -42,11 +42,14 @@ const zip = new AdmZip();
 // Pack manifest
 zip.addLocalFile(manifestPath);
 
-// Pack icons, src, and popup (if present)
+// Pack icons, src, popup, and editor (if present)
 zip.addLocalFolder(path.join(targetDir, 'icons'), 'icons');
 zip.addLocalFolder(path.join(targetDir, 'src'), 'src');
 if (fs.existsSync(path.join(targetDir, 'popup'))) {
     zip.addLocalFolder(path.join(targetDir, 'popup'), 'popup');
+}
+if (fs.existsSync(path.join(targetDir, 'editor'))) {
+    zip.addLocalFolder(path.join(targetDir, 'editor'), 'editor');
 }
 
 // 2. Direct zip output into docs/extension

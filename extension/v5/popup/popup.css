@@ -25,8 +25,8 @@ body {
   font-family: var(--font-family);
   background: var(--bg-main);
   color: var(--text-primary);
-  width: 340px;
-  min-height: 290px;
+  width: 350px;
+  min-height: 350px;
   overflow: hidden;
 }
 
@@ -103,13 +103,13 @@ body {
   padding: 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 11px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 .label-row {
@@ -140,10 +140,9 @@ body {
   gap: 6px;
 }
 
-/* Datalist Input */
-.form-input {
+.form-input, .form-select {
   flex: 1;
-  padding: 8px 10px;
+  padding: 7px 10px;
   font-size: 12px;
   font-family: var(--font-mono);
   color: var(--text-primary);
@@ -154,25 +153,24 @@ body {
   transition: all 0.2s ease;
 }
 
-.form-input:hover:not(:disabled) {
+.form-input:hover:not(:disabled), .form-select:hover:not(:disabled) {
   border-color: var(--primary);
 }
 
-.form-input:focus {
+.form-input:focus, .form-select:focus {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
-.form-input:disabled {
+.form-input:disabled, .form-select:disabled {
   background-color: #f1f5f9;
   color: var(--text-muted);
   cursor: not-allowed;
 }
 
-/* File Input Styling */
 .form-file-input {
   width: 100%;
-  padding: 6px 8px;
+  padding: 5px 8px;
   font-size: 11px;
   font-family: var(--font-sans);
   color: var(--text-primary);
@@ -189,7 +187,7 @@ body {
 }
 
 .form-file-input::file-selector-button {
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 4px;
   border: 1px solid var(--border);
   background: #f1f5f9;
@@ -198,12 +196,6 @@ body {
   font-weight: 600;
   cursor: pointer;
   margin-right: 8px;
-  transition: all 0.2s ease;
-}
-
-.form-file-input::file-selector-button:hover {
-  background: #e2e8f0;
-  border-color: var(--primary);
 }
 
 .btn-icon-refresh {
@@ -227,14 +219,17 @@ body {
   background: #f8fafc;
 }
 
-/* Render Button */
-.btn-render {
-  width: 100%;
-  padding: 10px 14px;
-  font-size: 13px;
+/* Button Group */
+.button-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn {
+  padding: 9px 12px;
+  font-size: 12px;
   font-weight: 700;
-  color: #ffffff;
-  background: linear-gradient(135deg, #0d9488 0%, #064e3b 100%);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -242,19 +237,32 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  box-shadow: 0 2px 4px rgba(13, 148, 136, 0.2);
   transition: all 0.2s ease;
-  margin-top: 2px;
+}
+
+.btn-secondary {
+  flex: 1;
+  background: #1e293b;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(30, 41, 59, 0.2);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #0f172a;
+  transform: translateY(-1px);
+}
+
+.btn-render {
+  flex: 1.2;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0d9488 0%, #064e3b 100%);
+  box-shadow: 0 2px 4px rgba(13, 148, 136, 0.2);
 }
 
 .btn-render:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(13, 148, 136, 0.3);
   filter: brightness(1.05);
-}
-
-.btn-render:active:not(:disabled) {
-  transform: translateY(0);
 }
 
 .btn-symbol {
