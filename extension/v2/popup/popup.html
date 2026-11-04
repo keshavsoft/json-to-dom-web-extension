@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>json-to-dom Extension</title>
+  <title>json-to-dom Table Workbench</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 
@@ -16,75 +16,86 @@
         <span class="logo-badge">KS</span>
         <div class="title-group">
           <h1>json-to-dom</h1>
-          <span class="version-tag">v1.0</span>
+          <span class="version-tag">v2.0</span>
         </div>
       </div>
-      <span class="status-indicator ready" id="statusBadge">Ready</span>
+      <div class="header-actions">
+        <span class="status-indicator ready" id="statusBadge">Workbench</span>
+      </div>
     </header>
 
-    <!-- Main Form -->
+    <!-- Top Action Toolbar -->
+    <div class="toolbar">
+      <button id="btnLoadSample" class="btn btn-secondary btn-sm" type="button" title="Load sample columns & data">
+        <span class="btn-icon">⚡</span> Sample
+      </button>
+      <button id="btnRenderTable" class="btn btn-hero btn-sm" type="button" title="Render JSON into DOM table">
+        <span class="btn-icon">▶</span> Render
+      </button>
+      <button id="btnInjectPage" class="btn btn-primary btn-sm" type="button" title="Inject rendered table into active webpage">
+        <span class="btn-icon">🌐</span> Inject
+      </button>
+      <button id="btnOpenModal" class="btn btn-dark btn-sm" type="button" title="Edit JSON Columns & Data">
+        <span class="btn-icon">⚙</span> JSON
+      </button>
+    </div>
+
+    <!-- Main Workspace -->
     <main class="popup-body">
-      <div class="intro-card">
-        <p class="intro-text">
-          Declarative JSON to DOM Table & Element Builder extension.
-        </p>
+      <!-- Search Filter Bar -->
+      <div class="search-bar-wrapper">
+        <input type="text" id="tableSearchInput" class="search-input" placeholder="🔍 Search table rows..." />
+        <span id="rowCountBadge" class="badge-count">0 rows</span>
       </div>
 
-      <!-- Action Buttons -->
-      <section class="action-section">
-        <button id="btnTestClick" class="btn btn-hero" type="button">
-          <span class="btn-icon">⚡</span> Test Click Event
-        </button>
+      <!-- Live DOM Table Preview Container -->
+      <div id="domPreviewWrapper" class="dom-preview-wrapper">
+        <div id="domPreview" class="dom-preview">
+          <div class="empty-state">
+            <span class="empty-icon">⊞</span>
+            <p class="empty-title">DOM Table Preview</p>
+            <p class="empty-desc">Click <strong>Sample</strong> then <strong>Render</strong> to build a DOM table from declarative JSON data.</p>
+          </div>
+        </div>
+      </div>
 
-        <button id="btnOpenModal" class="btn btn-primary" type="button">
-          <span class="btn-icon">🪟</span> Open Modal Popup
-        </button>
-      </section>
-
-      <!-- Feedback Area -->
+      <!-- Live Feedback Area -->
       <div id="feedbackMessage" class="feedback-msg">
-        Extension popup loaded. Click a button to test!
-      </div>
-
-      <!-- Stats Bar -->
-      <div class="stats-bar" id="statsBar">
-        <span id="clickCountDisplay">Clicks: 0</span>
-        <span id="activeTabDisplay">Tab: scanning...</span>
+        Ready. Load sample or edit JSON to begin.
       </div>
     </main>
 
-    <!-- In-Popup Modal Dialog -->
+    <!-- In-Popup Modal Dialog (Edit Columns & Data JSON) -->
     <div id="modalOverlay" class="modal-overlay hidden">
       <div class="modal-dialog">
         <div class="modal-header">
           <h2 class="modal-title">
-            <span class="modal-icon">🎉</span> Modal Popup
+            <span class="modal-icon">⚙</span> Edit Columns & Data JSON
           </h2>
           <button id="btnCloseModal" class="btn-close" type="button" title="Close modal">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="modal-desc">
-            Modal popup triggered successfully from the click event!
-          </p>
-          <ul class="modal-checklist">
-            <li><span class="check-icon">✓</span> Extension Manifest V3 active</li>
-            <li><span class="check-icon">✓</span> Popup HTML & CSS rendering</li>
-            <li><span class="check-icon">✓</span> Click event listeners connected</li>
-            <li><span class="check-icon">✓</span> In-popup modal overlay functional</li>
-          </ul>
-          <div class="modal-timestamp" id="modalTimestamp"></div>
+          <div class="modal-tabs">
+            <button class="modal-tab active" id="tabBtnColumns" type="button">columns.json</button>
+            <button class="modal-tab" id="tabBtnData" type="button">data.json</button>
+          </div>
+
+          <div class="editor-container">
+            <textarea id="jsonEditorArea" class="json-textarea" spellcheck="false"></textarea>
+          </div>
+          <div class="modal-hint">Edit schema or dataset, then click Apply.</div>
         </div>
         <div class="modal-footer">
-          <button id="btnModalAcknowledge" class="btn btn-secondary" type="button">
-            Got it, close
-          </button>
+          <button id="btnModalReset" class="btn btn-secondary btn-sm" type="button">Reset Default</button>
+          <button id="btnModalApply" class="btn btn-primary btn-sm" type="button">Apply & Close</button>
         </div>
       </div>
     </div>
 
     <!-- Footer -->
     <footer class="popup-footer">
-      <span>Compatible with <strong>@keshavsoft/json-to-dom</strong></span>
+      <span>Powered by <strong>@keshavsoft/json-to-dom</strong></span>
+      <span id="activeTabSnippet" class="tab-snippet">Tab: active</span>
     </footer>
   </div>
 
@@ -92,4 +103,3 @@
 </body>
 
 </html>
-
