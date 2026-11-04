@@ -59,4 +59,13 @@ if (fs.existsSync(zipPath)) {
 
 zip.writeZip(zipPath);
 
-console.log(`✅ Extension zipped successfully -> ${zipPath}`);
+// Also save a copy inside target extension version directory for convenient upload
+const targetVersionZip = path.join(targetDir, zipName);
+if (fs.existsSync(targetVersionZip)) {
+    fs.unlinkSync(targetVersionZip);
+}
+zip.writeZip(targetVersionZip);
+
+console.log(`✅ Extension zipped successfully:`);
+console.log(`   -> ${zipPath}`);
+console.log(`   -> ${targetVersionZip}`);

@@ -1,6 +1,6 @@
 {
   "name": "json-to-dom-web-extension",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Declarative JSON to DOM Builder & Table Workbench Browser Extension.",
   "publishConfig": {
     "access": "public"
@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build": "vite build",
-    "package": "node publish.js"
+    "package": "npm run build && node publish.js"
   },
   "keywords": [
     "json-to-dom",
