@@ -1,13 +1,28 @@
 (() => {
-    const inject = (file) => {
-        const script = document.createElement("script");
-        script.src = (typeof browser !== "undefined" ? browser : chrome).runtime.getURL(file);
-        script.onload = () => script.remove();
-        (document.head || document.documentElement).appendChild(script);
+    console.log("✅ json-to-dom extension content script loaded on active page");
+
+    // Optional: Inject standalone jsonToDom script if web accessible
+    const inject = ({ inFile }) => {
+        const localFile = inFile;
+        try {
+            const script = document.createElement("script");
+            script.type = "module";
+            script.src = (typeof browser !== "undefined" ? browser : chrome).runtime.getURL(localFile);
+            script.onload = () => script.remove();
+            (document.head || document.documentElement).appendChild(script);
+        } catch (err) {
+            console.warn("[json-to-dom] Script injection skipped:", err);
+        }
     };
 
-    // Inject tagToJson onto the page's window object
-    inject("src/tagToJson.min.js");
+    inject({ inFile: "src/jsonToDom.min.js" });
 
-    console.log("✅ tag-to-json v2 extension injected (window.tagToJson ready)");
+    // Listen for messages from popup
+    const runtime = typeof browser !== "undefined" ? browser.runtime : chrome.runtime;
+    runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "PING") {
+            sendResponse({ success: true, message: "PONG from json-to-dom content script" });
+            return true;
+        }
+    });
 })();

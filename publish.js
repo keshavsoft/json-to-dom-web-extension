@@ -12,7 +12,7 @@ if (!fs.existsSync(docsExtensionDir)) {
     fs.mkdirSync(docsExtensionDir, { recursive: true });
 }
 
-// 1. Detect latest version folder in extension/ (e.g. v1, v2)
+// 1. Detect latest version folder in extension/ (e.g. v1)
 const versionFolders = fs.readdirSync(extensionsRoot, { withFileTypes: true })
     .filter(entry => entry.isDirectory() && /^v\d+$/.test(entry.name))
     .map(entry => ({ name: entry.name, n: Number(entry.name.slice(1)) }))
@@ -49,8 +49,8 @@ if (fs.existsSync(path.join(targetDir, 'popup'))) {
     zip.addLocalFolder(path.join(targetDir, 'popup'), 'popup');
 }
 
-// 2. Direct zip output into docs/extension for public GitHub Pages serving
-const zipName = `tag-to-json-extension-v${version}.zip`;
+// 2. Direct zip output into docs/extension
+const zipName = `json-to-dom-web-extension-v${version}.zip`;
 const zipPath = path.join(docsExtensionDir, zipName);
 
 if (fs.existsSync(zipPath)) {
@@ -58,4 +58,5 @@ if (fs.existsSync(zipPath)) {
 }
 
 zip.writeZip(zipPath);
-console.log(`🎉 Success! Extension packaged directly into docs: docs/extension/${zipName}`);
+
+console.log(`✅ Extension zipped successfully -> ${zipPath}`);

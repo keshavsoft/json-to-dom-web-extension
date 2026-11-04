@@ -1,12 +1,24 @@
 {
   "manifest_version": 3,
-  "name": "tag-to-json Inspector",
+  "name": "json-to-dom Web Extension",
   "version": "1.0.0",
-  "description": "Extract live DOM elements into clean json-to-tag declarative specifications with one click or from console.",
+  "description": "Declarative JSON to DOM Builder & Table Workbench Extension.",
   "icons": {
     "48": "icons/KSIcon-48.png",
     "96": "icons/KSIcon-96.png"
   },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "48": "icons/KSIcon-48.png",
+      "96": "icons/KSIcon-96.png"
+    },
+    "default_title": "json-to-dom Extension"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
   "content_scripts": [
     {
       "matches": [
@@ -21,7 +33,7 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/tagToJson.min.js"
+        "src/jsonToDom.min.js"
       ],
       "matches": [
         "<all_urls>"
@@ -30,7 +42,7 @@
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "tag-to-json@keshavsoft.com",
+      "id": "json-to-dom@keshavsoft.com",
       "data_collection_permissions": {
         "required": [
           "none"

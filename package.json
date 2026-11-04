@@ -1,46 +1,30 @@
 {
   "name": "json-to-dom-web-extension",
   "version": "1.2.1",
-  "description": "Zero-dependency native DOM element to declarative JSON specification extractor. Perfect companion for json-to-tag.",
+  "description": "Declarative JSON to DOM Builder & Table Workbench Browser Extension.",
   "publishConfig": {
     "access": "public"
   },
   "type": "module",
-  "main": "src/index.js",
-  "module": "./src/index.js",
-  "exports": {
-    ".": {
-      "import": "./src/index.js",
-      "default": "./src/index.js"
-    },
-    "./v1": "./src/v1/index.js",
-    "./v2": "./src/v2/index.js",
-    "./package.json": "./package.json"
-  },
   "files": [
-    "src",
-    "docs/dist",
+    "extension",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
     "package": "node publish.js"
   },
   "keywords": [
-    "dom-to-json",
-    "tag-to-json",
-    "json-to-tag",
-    "html-parser",
-    "dom-serializer",
-    "declarative-dom"
+    "json-to-dom",
+    "table-workbench",
+    "declarative-dom",
+    "browser-extension",
+    "chrome-extension"
   ],
   "author": "KeshavSoft",
   "license": "MIT",
   "devDependencies": {
-    "adm-zip": "^0.5.12",
-    "vite": "^5.4.2"
+    "adm-zip": "^0.5.12"
   },
   "dependencies": {}
 }
