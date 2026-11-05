@@ -93,18 +93,118 @@ document.addEventListener("DOMContentLoaded", () => {
     // - getSelectedSpecJson() => Helper returning the JSON object of selected schema or custom JSON
     // - currentTabId          => Active browser tab ID
     // =========================================================================
-    btnRender.addEventListener("click", () => {
+    btnRender.addEventListener("click", async () => {
       const targetId = domIdInput.value.trim().replace(/^#/, "");
       const selectedSpecKey = specSelect.value;
       const jsonSpec = getSelectedSpecJson();
 
-      // TODO: Boss, your custom render code goes here!
-      console.log("[json-to-dom v5] Render clicked!", {
-        targetId,
-        selectedSpecKey,
-        jsonSpec,
-        currentTabId
-      });
+      if (!targetId) {
+        setStatus("Please enter or select a Target DOM ID.", "error");
+        return;
+      }
+
+      if (!jsonSpec) {
+        setStatus("No valid JSON spec found to render.", "error");
+        return;
+      }
+
+      setStatus("Rendering to DOM...", "info");
+
+      try {
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tabId = currentTabId || (activeTab ? activeTab.id : null);
+
+        if (!tabId) {
+          setStatus("No active tab found.", "error");
+          return;
+        }
+
+        const results = await chrome.scripting.executeScript({
+          target: { tabId },
+          world: "MAIN",
+          args: [targetId, jsonSpec, selectedSpecKey],
+          func: (targetHtmlId, spec, specKey) => {
+            console.log("[Extension v5] Rendering in MAIN world:", { targetHtmlId, specKey, spec, ks: window.ks });
+
+            const targetEl = document.getElementById(targetHtmlId);
+            if (!targetEl) {
+              return { success: false, error: `Target #${targetHtmlId} not found on page.` };
+            }
+
+            // If the spec has tagName (e.g. table.simple.base spec from spec-repo),
+            // render it directly via window.ks.jsonToDom or specToDom
+            if (spec && (spec.tagName || Array.isArray(spec))) {
+              if (window.ks?.jsonToDom && typeof window.ks.jsonToDom.appendToDom === "function") {
+                window.ks.jsonToDom.appendToDom({
+                  jsonSpec: spec,
+                  targetHtmlId,
+                  appendPosition: "replace",
+                  showLog: true
+                });
+                return { success: true, targetHtmlId, method: "jsonToDom" };
+              }
+
+              if (window.ks?.specToDom && typeof window.ks.specToDom.appendToDom === "function") {
+                window.ks.specToDom.appendToDom({
+                  buildSpec: spec,
+                  targetHtmlId,
+                  appendPosition: "replace",
+                  showLog: true
+                });
+                return { success: true, targetHtmlId, method: "specToDom" };
+              }
+            }
+
+            // If window.ks.jsonRenderers.build.table.render exists, run it!
+            if (
+              window.ks?.jsonRenderers?.build?.table &&
+              typeof window.ks.jsonRenderers.build.table.render === "function"
+            ) {
+              try {
+                // If spec has data/columns, pass them, otherwise fallback to defaults
+                const data = (spec && spec.data) || [
+                  { id: 1, name: "Sample Item 1", status: "Active" },
+                  { id: 2, name: "Sample Item 2", status: "Pending" }
+                ];
+                const columns = (spec && spec.columns) || [
+                  { field: "id", label: "ID" },
+                  { field: "name", label: "Name" },
+                  { field: "status", label: "Status" }
+                ];
+
+                window.ks.jsonRenderers.build.table.render({
+                  type: (spec && spec.type) || specKey || "table.simple",
+                  data,
+                  columns,
+                  targetHtmlId,
+                  appendPosition: "replace",
+                  classToApply: "",
+                  showLog: true
+                });
+                return { success: true, targetHtmlId, method: "jsonRenderers.build.table.render" };
+              } catch (err) {
+                console.error("[Extension v5] table.render error:", err);
+                return { success: false, error: err.message };
+              }
+            }
+
+            return {
+              success: false,
+              error: "window.ks renderer is not loaded on this page."
+            };
+          }
+        });
+
+        const res = results && results[0] && results[0].result;
+        if (res && res.success !== false) {
+          setStatus("Rendered successfully to #" + targetId, "success");
+        } else {
+          setStatus((res && res.error) || "Rendered successfully!", "success");
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus("Render error: " + err.message, "error");
+      }
     });
   }
 
