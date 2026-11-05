@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>json-to-dom Monaco Spec Workbench</title>
+  <title>json-to-dom v6 Monaco Spec Workbench</title>
   <link rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/editor/editor.main.min.css">
   <style>
@@ -26,14 +26,16 @@
 
     /* Top Toolbar */
     .top-bar {
-      height: 42px;
+      min-height: 46px;
       background-color: #252526;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 6px 16px;
       border-bottom: 1px solid #333333;
       user-select: none;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .brand-section {
@@ -57,13 +59,31 @@
       color: #ffffff;
     }
 
-    .target-badge {
-      font-size: 11px;
-      color: #9cdcfe;
+    /* Target Selector inside Monaco Top Bar */
+    .target-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .target-input {
       background: #1e293b;
-      padding: 2px 8px;
-      border-radius: 4px;
+      color: #9cdcfe;
       border: 1px solid #334155;
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 4px;
+      font-family: monospace;
+      width: 220px;
+    }
+
+    .select-mini {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      padding: 4px 8px;
+      font-size: 12px;
+      border-radius: 4px;
     }
 
     .action-section {
@@ -73,7 +93,7 @@
     }
 
     .btn {
-      padding: 6px 12px;
+      padding: 6px 14px;
       font-size: 12px;
       font-weight: 600;
       border: none;
@@ -103,11 +123,17 @@
       background: #444444;
     }
 
+    .btn-icon {
+      background: #334155;
+      color: #fff;
+      padding: 4px 8px;
+    }
+
     /* Monaco Container */
     #monacoContainer {
       flex: 1;
       width: 100%;
-      height: calc(100vh - 42px);
+      height: calc(100vh - 46px);
     }
   </style>
 </head>
@@ -116,16 +142,37 @@
   <!-- Top Bar -->
   <header class="top-bar">
     <div class="brand-section">
-      <span class="logo-badge">KS Monaco</span>
+      <span class="logo-badge">KS Monaco v6</span>
       <span id="schemaNameLabel" class="schema-title">Schema: table.simple.base</span>
-      <span id="targetIdBadge" class="target-badge">Target: None</span>
+    </div>
+
+    <!-- Target Selector with datalist (both #id and [data-role]) -->
+    <div class="target-controls">
+      <input 
+        type="text" 
+        id="targetSelectorInput" 
+        list="monacoTargetList" 
+        class="target-input" 
+        placeholder="Target #id or [data-role=...]"
+      />
+      <datalist id="monacoTargetList"></datalist>
+
+      <button id="btnRescanTargets" class="btn btn-icon" type="button" title="Rescan page targets">
+        ↻
+      </button>
+
+      <select id="monacoPositionSelect" class="select-mini" title="Mount Position">
+        <option value="replace" selected>replace</option>
+        <option value="inside">inside</option>
+        <option value="prepend">prepend</option>
+      </select>
     </div>
 
     <div class="action-section">
       <button id="btnFormatJson" class="btn btn-format" type="button" title="Format JSON">
         Format
       </button>
-      <button id="btnApplyToPage" class="btn btn-apply" type="button" title="Render this spec directly into the target DOM ID on active tab">
+      <button id="btnApplyToPage" class="btn btn-apply" type="button" title="Render directly into the page target">
         ⚡ Render to DOM
       </button>
     </div>
@@ -140,4 +187,3 @@
 </body>
 
 </html>
-

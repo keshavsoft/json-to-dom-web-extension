@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>json-to-dom v5</title>
+  <title>json-to-dom v6</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 
@@ -16,7 +16,7 @@
         <span class="logo-badge">KS</span>
         <div class="title-group">
           <h1>json-to-dom</h1>
-          <span class="version-tag">v5.0</span>
+          <span class="version-tag">v6.0</span>
         </div>
       </div>
       <span class="status-indicator" id="statusBadge">Ready</span>
@@ -24,10 +24,10 @@
 
     <!-- Main Content -->
     <main class="popup-body">
-      <!-- 1. Searchable Target DOM ID (Input with Datalist) -->
+      <!-- 1. Searchable Target Selector (DOM ID or [data-role]) -->
       <div class="form-group">
         <div class="label-row">
-          <label for="domIdInput" class="form-label">Target DOM ID</label>
+          <label for="domIdInput" class="form-label">Target Element (#id or [data-role])</label>
           <span id="idCountBadge" class="count-badge">Scanning...</span>
         </div>
         <div class="input-row">
@@ -36,18 +36,31 @@
             id="domIdInput" 
             list="domIdDatalist" 
             class="form-input" 
-            placeholder="Type or pick DOM ID..." 
+            placeholder="#id or [data-role=...]" 
             autocomplete="off"
             disabled
           />
           <datalist id="domIdDatalist"></datalist>
-          <button id="btnRefreshIds" class="btn-icon-refresh" type="button" title="Rescan page IDs">
+          <button id="btnRefreshIds" class="btn-icon-refresh" type="button" title="Rescan page IDs and data-roles">
             ↻
           </button>
         </div>
       </div>
 
-      <!-- 2. Spec-Repo Schema Dropdown -->
+      <!-- 2. Target Mode: Insert Position -->
+      <div class="form-group">
+        <div class="label-row">
+          <label for="positionSelect" class="form-label">Append Position</label>
+          <span class="count-badge">mount</span>
+        </div>
+        <select id="positionSelect" class="form-select">
+          <option value="replace" selected>replace (clean & mount)</option>
+          <option value="inside">inside (append to children)</option>
+          <option value="prepend">prepend (add as first child)</option>
+        </select>
+      </div>
+
+      <!-- 3. Spec-Repo Schema Dropdown -->
       <div class="form-group">
         <div class="label-row">
           <label for="specSelect" class="form-label">Schema from spec-repo</label>
@@ -58,7 +71,7 @@
         </select>
       </div>
 
-      <!-- 3. Local JSON File Upload (Optional alternative) -->
+      <!-- 4. Local JSON File Upload -->
       <div class="form-group">
         <div class="label-row">
           <label for="jsonFileInput" class="form-label">Or Custom JSON File</label>
@@ -72,9 +85,9 @@
         />
       </div>
 
-      <!-- 4. Action Buttons (Inspect in Monaco & Render) -->
+      <!-- 5. Action Buttons (Inspect in Monaco & Render) -->
       <div class="button-group">
-        <button id="btnOpenMonaco" class="btn btn-secondary" type="button" title="Open selected schema in Monaco Editor">
+        <button id="btnOpenMonaco" class="btn btn-secondary" type="button" title="Open selected schema in Monaco Editor tab">
           <span class="btn-symbol">📝</span> Monaco Editor
         </button>
         <button id="btnRender" class="btn btn-render" type="button">
@@ -84,13 +97,13 @@
 
       <!-- Feedback / Status Area -->
       <div id="statusMessage" class="status-message">
-        Choose DOM ID & schema, then edit in Monaco or Render.
+        Pick ID or [data-role], select schema, then Render or Edit.
       </div>
     </main>
 
     <!-- Footer -->
     <footer class="popup-footer">
-      <span>Powered by <strong>spec-repo</strong> & <strong>json-to-dom</strong></span>
+      <span>Powered by <strong>spec-repo</strong> & <strong>json-to-dom v6</strong></span>
     </footer>
   </div>
 

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>json-to-dom v6</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <div class="popup-card">
+    <!-- Header -->
+    <header class="popup-header">
+      <div class="brand">
+        <span class="logo-badge">KS</span>
+        <div class="title-group">
+          <h1>json-to-dom</h1>
+          <span class="version-tag">v6.0</span>
+        </div>
+      </div>
+      <span class="status-indicator" id="statusBadge">Ready</span>
+    </header>
+
+    <!-- Main Content -->
+    <main class="popup-body">
+      <!-- 1. Searchable Target Selector (DOM ID or [data-role]) -->
+      <div class="form-group">
+        <div class="label-row">
+          <label for="domIdInput" class="form-label">Target Element (#id or [data-role])</label>
+          <span id="idCountBadge" class="count-badge">Scanning...</span>
+        </div>
+        <div class="input-row">
+          <input 
+            type="text" 
+            id="domIdInput" 
+            list="domIdDatalist" 
+            class="form-input" 
+            placeholder="#id or [data-role=...]" 
+            autocomplete="off"
+            disabled
+          />
+          <datalist id="domIdDatalist"></datalist>
+          <button id="btnRefreshIds" class="btn-icon-refresh" type="button" title="Rescan page IDs and data-roles">
+            ↻
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Target Mode: Insert Position -->
+      <div class="form-group">
+        <div class="label-row">
+          <label for="positionSelect" class="form-label">Append Position</label>
+          <span class="count-badge">mount</span>
+        </div>
+        <select id="positionSelect" class="form-select">
+          <option value="replace" selected>replace (clean & mount)</option>
+          <option value="inside">inside (append to children)</option>
+          <option value="prepend">prepend (add as first child)</option>
+        </select>
+      </div>
+
+      <!-- 3. Spec-Repo Schema Dropdown -->
+      <div class="form-group">
+        <div class="label-row">
+          <label for="specSelect" class="form-label">Schema from spec-repo</label>
+          <span id="specCountBadge" class="count-badge">Loading...</span>
+        </div>
+        <select id="specSelect" class="form-select">
+          <option value="" disabled selected>Loading schemas...</option>
+        </select>
+      </div>
+
+      <!-- 4. Local JSON File Upload -->
+      <div class="form-group">
+        <div class="label-row">
+          <label for="jsonFileInput" class="form-label">Or Custom JSON File</label>
+          <span id="fileStatusBadge" class="count-badge">No file</span>
+        </div>
+        <input 
+          type="file" 
+          id="jsonFileInput" 
+          class="form-file-input" 
+          accept=".json,application/json" 
+        />
+      </div>
+
+      <!-- 5. Action Buttons (Inspect in Monaco & Render) -->
+      <div class="button-group">
+        <button id="btnOpenMonaco" class="btn btn-secondary" type="button" title="Open selected schema in Monaco Editor tab">
+          <span class="btn-symbol">📝</span> Monaco Editor
+        </button>
+        <button id="btnRender" class="btn btn-render" type="button">
+          <span class="btn-symbol">⚡</span> Render
+        </button>
+      </div>
+
+      <!-- Feedback / Status Area -->
+      <div id="statusMessage" class="status-message">
+        Pick ID or [data-role], select schema, then Render or Edit.
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="popup-footer">
+      <span>Powered by <strong>spec-repo</strong> & <strong>json-to-dom v6</strong></span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>

@@ -1,13 +1,13 @@
 /**
- * json-to-dom v5 Popup Controller
+ * json-to-dom v6 Popup Controller
  * KeshavSoft
  * 
- * Features:
- * 1. Datalist search for active tab DOM IDs (alphabetically sorted).
- * 2. Spec-repo catalog dropdown (definitions, specs, tags from npm spec-repo).
- * 3. File upload for custom JSON.
- * 4. "Monaco Editor" button: opens standalone Monaco Editor with the selected schema.
- * 5. "Render" button: clean and ready for boss's code!
+ * Features in v6:
+ * 1. Hybrid Target Scanner: Scans for [id] AND [data-role] elements!
+ * 2. Unending Chaining: Auto-rescans and repopulates targets immediately after each render.
+ * 3. Mount Position Selector: replace, inside (append), or prepend.
+ * 4. Spec-repo catalog + Custom JSON loader.
+ * 5. Full-Screen Monaco Editor Workbench launcher.
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const domIdDatalist = document.getElementById("domIdDatalist");
   const btnRefreshIds = document.getElementById("btnRefreshIds");
   const idCountBadge = document.getElementById("idCountBadge");
+  const positionSelect = document.getElementById("positionSelect");
   const specSelect = document.getElementById("specSelect");
   const specCountBadge = document.getElementById("specCountBadge");
   const jsonFileInput = document.getElementById("jsonFileInput");
@@ -31,12 +32,12 @@ document.addEventListener("DOMContentLoaded", () => {
   init();
 
   async function init() {
-    await scanDomIds();
+    await scanDomTargets();
     await loadSpecCatalog();
 
-    // Refresh DOM IDs
+    // Refresh DOM Targets (both ID and data-role)
     btnRefreshIds.addEventListener("click", () => {
-      scanDomIds();
+      scanDomTargets();
     });
 
     // Custom JSON File Input
@@ -72,34 +73,29 @@ document.addEventListener("DOMContentLoaded", () => {
       reader.readAsText(file);
     });
 
-    // Open in Monaco Editor
+    // Open Monaco Workbench in new browser tab
     btnOpenMonaco.addEventListener("click", () => {
       const selectedSpecKey = specSelect.value || "table.simple.base";
-      const targetId = domIdInput.value.trim().replace(/^#/, "");
+      const targetSelector = domIdInput.value.trim();
 
       const editorUrl = chrome.runtime.getURL(
-        `editor/editor.html?specKey=${encodeURIComponent(selectedSpecKey)}&targetId=${encodeURIComponent(targetId)}&tabId=${currentTabId || ""}`
+        `editor/editor.html?specKey=${encodeURIComponent(selectedSpecKey)}&targetSelector=${encodeURIComponent(targetSelector)}&tabId=${currentTabId || ""}`
       );
 
-      // Open Monaco in a new window/tab
       chrome.tabs.create({ url: editorUrl });
     });
 
     // =========================================================================
-    // BOSS: WRITE YOUR RENDER CODE RIGHT HERE!
-    // Available variables you can use:
-    // - domIdInput.value      => The DOM ID typed or selected by you
-    // - specSelect.value      => The spec-repo schema key selected
-    // - getSelectedSpecJson() => Helper returning the JSON object of selected schema or custom JSON
-    // - currentTabId          => Active browser tab ID
+    // RENDER HANDLER (with MAIN world & data-role unending chaining)
     // =========================================================================
     btnRender.addEventListener("click", async () => {
-      const targetId = domIdInput.value.trim().replace(/^#/, "");
+      const targetSelector = domIdInput.value.trim();
       const selectedSpecKey = specSelect.value;
       const jsonSpec = getSelectedSpecJson();
+      const appendPosition = positionSelect ? positionSelect.value : "replace";
 
-      if (!targetId) {
-        setStatus("Please enter or select a Target DOM ID.", "error");
+      if (!targetSelector) {
+        setStatus("Please pick a Target (#id or [data-role=...]).", "error");
         return;
       }
 
@@ -122,23 +118,41 @@ document.addEventListener("DOMContentLoaded", () => {
         const results = await chrome.scripting.executeScript({
           target: { tabId },
           world: "MAIN",
-          args: [targetId, jsonSpec, selectedSpecKey],
-          func: (targetHtmlId, spec, specKey) => {
-            console.log("[Extension v5] Rendering in MAIN world:", { targetHtmlId, specKey, spec, ks: window.ks });
+          args: [targetSelector, jsonSpec, selectedSpecKey, appendPosition],
+          func: (selector, spec, specKey, position) => {
+            console.log("[json-to-dom v6] Executing in MAIN world:", { selector, specKey, position, spec });
 
-            const targetEl = document.getElementById(targetHtmlId);
-            if (!targetEl) {
-              return { success: false, error: `Target #${targetHtmlId} not found on page.` };
+            // Find target element by #id, [data-role="..."], or raw selector
+            let targetEl = null;
+            if (selector.startsWith("#")) {
+              targetEl = document.getElementById(selector.slice(1));
+            } else if (selector.startsWith("[data-role=") || selector.startsWith("[data-role")) {
+              targetEl = document.querySelector(selector);
+            } else if (selector.startsWith("data-role=") || selector.startsWith("role=")) {
+              const val = selector.replace(/^(data-)?role=/, "").replace(/['"]/g, "");
+              targetEl = document.querySelector(`[data-role="${val}"]`);
+            } else {
+              // Try ID first, then [data-role]
+              targetEl = document.getElementById(selector) || document.querySelector(`[data-role="${selector}"]`);
             }
 
-            // If the spec has tagName (e.g. table.simple.base spec from spec-repo),
-            // render it directly via window.ks.jsonToDom or specToDom
+            if (!targetEl) {
+              return { success: false, error: `Target element "${selector}" not found on page.` };
+            }
+
+            // Ensure element has an ID for APIs that require targetHtmlId
+            if (!targetEl.id) {
+              targetEl.id = "ks-role-" + (targetEl.getAttribute("data-role") || "target-" + Date.now());
+            }
+            const targetHtmlId = targetEl.id;
+
+            // 1. Tag Specification direct render via jsonToDom or specToDom
             if (spec && (spec.tagName || Array.isArray(spec))) {
               if (window.ks?.jsonToDom && typeof window.ks.jsonToDom.appendToDom === "function") {
                 window.ks.jsonToDom.appendToDom({
                   jsonSpec: spec,
                   targetHtmlId,
-                  appendPosition: "replace",
+                  appendPosition: position || "replace",
                   showLog: true
                 });
                 return { success: true, targetHtmlId, method: "jsonToDom" };
@@ -148,20 +162,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.ks.specToDom.appendToDom({
                   buildSpec: spec,
                   targetHtmlId,
-                  appendPosition: "replace",
+                  appendPosition: position || "replace",
                   showLog: true
                 });
                 return { success: true, targetHtmlId, method: "specToDom" };
               }
             }
 
-            // If window.ks.jsonRenderers.build.table.render exists, run it!
+            // 2. High-level table renderer
             if (
               window.ks?.jsonRenderers?.build?.table &&
               typeof window.ks.jsonRenderers.build.table.render === "function"
             ) {
               try {
-                // If spec has data/columns, pass them, otherwise fallback to defaults
                 const data = (spec && spec.data) || [
                   { id: 1, name: "Sample Item 1", status: "Active" },
                   { id: 2, name: "Sample Item 2", status: "Pending" }
@@ -177,13 +190,13 @@ document.addEventListener("DOMContentLoaded", () => {
                   data,
                   columns,
                   targetHtmlId,
-                  appendPosition: "replace",
+                  appendPosition: position || "replace",
                   classToApply: "",
                   showLog: true
                 });
                 return { success: true, targetHtmlId, method: "jsonRenderers.build.table.render" };
               } catch (err) {
-                console.error("[Extension v5] table.render error:", err);
+                console.error("[Extension v6] table.render error:", err);
                 return { success: false, error: err.message };
               }
             }
@@ -197,9 +210,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const res = results && results[0] && results[0].result;
         if (res && res.success !== false) {
-          setStatus("Rendered successfully to #" + targetId, "success");
+          setStatus(`Rendered successfully to ${targetSelector}!`, "success");
+          
+          // UNENDING CHAIN: Automatically rescan DOM so newly generated [data-role] elements are immediately selectable!
+          await scanDomTargets();
         } else {
-          setStatus((res && res.error) || "Rendered successfully!", "success");
+          setStatus((res && res.error) || "Render finished.", "error");
         }
       } catch (err) {
         console.error(err);
@@ -259,35 +275,50 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       specSelect.appendChild(optGroupDefs);
 
-      // Group 2: Table Components from spec-repo/spec.json
-      if (specCatalog.spec) {
+      // Group 2: Full Specs
+      if (specCatalog.spec && Object.keys(specCatalog.spec).length > 0) {
         const optGroupSpec = document.createElement("optgroup");
-        optGroupSpec.label = "Components (spec-repo/spec.json)";
-        Object.keys(specCatalog.spec).forEach((key) => {
+        optGroupSpec.label = "Complete Specs (spec-repo/spec.json)";
+        Object.keys(specCatalog.spec).forEach((k) => {
           const opt = document.createElement("option");
-          opt.value = key;
-          opt.textContent = key;
+          opt.value = k;
+          opt.textContent = k;
           optGroupSpec.appendChild(opt);
         });
         specSelect.appendChild(optGroupSpec);
       }
 
-      const totalCount = defPaths.length + (specCatalog.spec ? Object.keys(specCatalog.spec).length : 0);
+      // Group 3: Semantic Tags
+      if (specCatalog.tags && Object.keys(specCatalog.tags).length > 0) {
+        const optGroupTags = document.createElement("optgroup");
+        optGroupTags.label = "HTML Tags (spec-repo/tags.json)";
+        Object.keys(specCatalog.tags).forEach((k) => {
+          const opt = document.createElement("option");
+          opt.value = k;
+          opt.textContent = `<${k}>`;
+          optGroupTags.appendChild(opt);
+        });
+        specSelect.appendChild(optGroupTags);
+      }
+
+      const totalCount = defPaths.length +
+        Object.keys(specCatalog.spec || {}).length +
+        Object.keys(specCatalog.tags || {}).length;
+
       specCountBadge.textContent = `${totalCount} specs`;
       setStatus(`Loaded ${totalCount} schemas from spec-repo.`, "info");
     } catch (err) {
-      console.error("[json-to-dom v5] Error loading spec catalog:", err);
-      specSelect.innerHTML = `<option value="" disabled selected>Error loading specs</option>`;
+      console.error("[json-to-dom v6] Could not load spec catalog:", err);
       specCountBadge.textContent = "Error";
-      setStatus("Could not load spec catalog: " + err.message, "error");
+      setStatus("Could not load bundled spec-repo catalog.", "error");
     }
   }
 
   function extractPaths(obj, prefix = "") {
     let paths = [];
     for (const k in obj) {
-      const p = prefix ? prefix + "." + k : k;
-      if (obj[k] && typeof obj[k] === "object" && obj[k].tagName) {
+      const p = prefix ? `${prefix}.${k}` : k;
+      if (obj[k] && obj[k].tagName) {
         paths.push(p);
       } else if (obj[k] && typeof obj[k] === "object" && !Array.isArray(obj[k])) {
         paths.push(...extractPaths(obj[k], p));
@@ -297,16 +328,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * Scan active webpage for DOM IDs and sort alphabetically
+   * Scan active webpage for DOM IDs and data-role attributes
+   * (Enables Unending Chaining!)
    */
-  async function scanDomIds() {
+  async function scanDomTargets() {
     domIdInput.disabled = true;
     idCountBadge.textContent = "Scanning...";
 
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab || !tab.id) {
-        idCountBadge.textContent = "0 IDs";
+        idCountBadge.textContent = "0 targets";
         return;
       }
 
@@ -321,35 +353,69 @@ document.addEventListener("DOMContentLoaded", () => {
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: () => {
-          const nodes = Array.from(document.querySelectorAll("[id]"));
-          return nodes
-            .map((el) => el.id)
-            .filter((id) => id && id.trim().length > 0);
+          // 1. Collect all elements with [id]
+          const idNodes = Array.from(document.querySelectorAll("[id]"))
+            .map((el) => ({
+              type: "id",
+              value: `#${el.id}`,
+              display: `#${el.id} (${el.tagName.toLowerCase()})`
+            }))
+            .filter((x) => x.value.length > 1);
+
+          // 2. Collect all elements with [data-role]
+          const roleNodes = Array.from(document.querySelectorAll("[data-role]"))
+            .map((el) => {
+              const role = el.getAttribute("data-role");
+              return {
+                type: "role",
+                value: `[data-role="${role}"]`,
+                display: `[data-role="${role}"] (${el.tagName.toLowerCase()})`
+              };
+            })
+            .filter((x) => x.value && x.value.length > 13);
+
+          return { idNodes, roleNodes };
         }
       });
 
-      let idList = (results && results[0] && results[0].result) || [];
-      idList.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+      const data = (results && results[0] && results[0].result) || { idNodes: [], roleNodes: [] };
+      const { idNodes, roleNodes } = data;
+
+      idNodes.sort((a, b) => a.value.localeCompare(b.value));
+      roleNodes.sort((a, b) => a.value.localeCompare(b.value));
 
       domIdDatalist.innerHTML = "";
 
-      if (idList.length === 0) {
-        domIdInput.placeholder = "No elements with ID found";
-        idCountBadge.textContent = "0 IDs";
-        return;
-      }
+      const currentVal = domIdInput.value.trim();
 
-      idList.forEach((id) => {
+      // Populate IDs
+      idNodes.forEach((item) => {
         const option = document.createElement("option");
-        option.value = id;
+        option.value = item.value;
+        option.label = item.display;
         domIdDatalist.appendChild(option);
       });
 
+      // Populate Roles
+      roleNodes.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = item.value;
+        option.label = item.display;
+        domIdDatalist.appendChild(option);
+      });
+
+      const totalTargets = idNodes.length + roleNodes.length;
+      idCountBadge.textContent = `${totalTargets} targets (${roleNodes.length} roles)`;
+
       domIdInput.disabled = false;
-      domIdInput.placeholder = "Type or pick DOM ID...";
-      idCountBadge.textContent = `${idList.length} IDs`;
+      domIdInput.placeholder = totalTargets > 0 ? "Pick #id or [data-role]..." : "No targets found";
+
+      // If nothing selected yet, prefer first ID
+      if (!currentVal && idNodes.length > 0) {
+        domIdInput.value = idNodes[0].value;
+      }
     } catch (err) {
-      console.error("[json-to-dom v5] Scan error:", err);
+      console.error("[json-to-dom v6] Target scan error:", err);
       domIdInput.disabled = true;
       idCountBadge.textContent = "Error";
     }
