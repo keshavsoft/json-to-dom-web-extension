@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "json-to-dom Web Extension",
+  "version": "7.0.0",
+  "description": "Declarative JSON to DOM Builder with Monaco JSON viewer.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/KSIcon-48.png",
+    "96": "icons/KSIcon-96.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/KSIcon-48.png"
+    },
+    "default_title": "json-to-dom Spec Workbench"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/injectStart.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/jsonToDom.min.js",
+        "src/specCatalog.json",
+        "editor/editor.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "json-to-dom@keshavsoft.com",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ],
+        "optional": []
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "120.0"
+    }
+  }
+}
