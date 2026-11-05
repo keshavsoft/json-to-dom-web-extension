@@ -4,9 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>json-to-dom v6 Monaco Spec Workbench</title>
-  <link rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/editor/editor.main.min.css">
+  <title>json-to-dom Spec Viewer</title>
   <style>
     * {
       box-sizing: border-box;
@@ -16,7 +14,7 @@
 
     body {
       background-color: #1e1e1e;
-      color: #cccccc;
+      color: #d4d4d4;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       height: 100vh;
       display: flex;
@@ -24,165 +22,213 @@
       overflow: hidden;
     }
 
-    /* Top Toolbar */
+    /* Top Bar */
     .top-bar {
-      min-height: 46px;
+      height: 48px;
+      min-height: 48px;
       background-color: #252526;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 6px 16px;
+      padding: 0 16px;
       border-bottom: 1px solid #333333;
       user-select: none;
       gap: 12px;
-      flex-wrap: wrap;
+      z-index: 10;
     }
 
-    .brand-section {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .logo-badge {
+    .brand-badge {
       background: #0d9488;
       color: #ffffff;
       font-weight: 700;
       font-size: 11px;
-      padding: 3px 6px;
-      border-radius: 4px;
-    }
-
-    .schema-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #ffffff;
-    }
-
-    /* Target Selector inside Monaco Top Bar */
-    .target-controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .target-input {
-      background: #1e293b;
-      color: #9cdcfe;
-      border: 1px solid #334155;
-      padding: 4px 10px;
-      font-size: 12px;
-      border-radius: 4px;
-      font-family: monospace;
-      width: 220px;
-    }
-
-    .select-mini {
-      background: #1e293b;
-      color: #e2e8f0;
-      border: 1px solid #334155;
       padding: 4px 8px;
-      font-size: 12px;
       border-radius: 4px;
+      letter-spacing: 0.5px;
     }
 
-    .action-section {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .btn {
-      padding: 6px 14px;
+    .schema-label {
       font-size: 12px;
       font-weight: 600;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.15s ease;
+      color: #94a3b8;
     }
 
-    .btn-apply {
+    .schema-select {
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      font-size: 13px;
+      border-radius: 4px;
+      font-weight: 600;
+      min-width: 320px;
+      max-width: 480px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .schema-select:focus {
+      border-color: #0d9488;
+    }
+
+    .btn-show {
       background: #0d9488;
       color: #ffffff;
+      border: none;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s ease;
     }
 
-    .btn-apply:hover {
+    .btn-show:hover {
       background: #0f766e;
     }
 
-    .btn-format {
-      background: #333333;
-      color: #ffffff;
+    .btn-show:active {
+      transform: translateY(1px);
     }
 
-    .btn-format:hover {
-      background: #444444;
+    .status-text {
+      font-size: 12px;
+      color: #10b981;
+      margin-left: auto;
+      font-weight: 500;
     }
 
-    .btn-icon {
-      background: #334155;
-      color: #fff;
-      padding: 4px 8px;
-    }
-
-    /* Monaco Container */
-    #monacoContainer {
+    /* Code Editor Workspace */
+    .editor-workspace {
       flex: 1;
       width: 100%;
-      height: calc(100vh - 46px);
+      height: calc(100vh - 48px);
+      display: flex;
+      position: relative;
+      background-color: #1e1e1e;
+      overflow: hidden;
+    }
+
+    /* Monaco Container (if loaded) */
+    #monacoContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      display: none;
+    }
+
+    /* Built-in Syntax Highlighted Code Viewer & Editor */
+    .built-in-editor {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      overflow: auto;
+      background: #1e1e1e;
+      font-family: Consolas, "Courier New", "JetBrains Mono", monospace;
+      font-size: 13px;
+      line-height: 20px;
+    }
+
+    /* Line Numbers Gutter */
+    .gutter {
+      background-color: #1e1e1e;
+      color: #858585;
+      padding: 16px 14px 16px 16px;
+      text-align: right;
+      user-select: none;
+      border-right: 1px solid #2d2d2d;
+      min-width: 55px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 20px;
+    }
+
+    /* Code Container */
+    .code-container {
+      flex: 1;
+      padding: 16px 20px;
+      overflow-x: auto;
+      white-space: pre;
+      color: #d4d4d4;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 20px;
+      outline: none;
+    }
+
+    /* JSON Syntax Highlighting Classes (VS Code Dark Theme) */
+    .json-key {
+      color: #9cdcfe;
+    }
+
+    .json-string {
+      color: #ce9178;
+    }
+
+    .json-number {
+      color: #b5cea8;
+    }
+
+    .json-boolean {
+      color: #569cd6;
+      font-weight: 600;
+    }
+
+    .json-null {
+      color: #569cd6;
+      font-weight: 600;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1e1e1e;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #424242;
+      border-radius: 6px;
+      border: 3px solid #1e1e1e;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4f4f4f;
     }
   </style>
 </head>
 
 <body>
-  <!-- Top Bar -->
+  <!-- Clean Top Bar -->
   <header class="top-bar">
-    <div class="brand-section">
-      <span class="logo-badge">KS Monaco v6</span>
-      <span id="schemaNameLabel" class="schema-title">Schema: table.simple.base</span>
-    </div>
-
-    <!-- Target Selector with datalist (both #id and [data-role]) -->
-    <div class="target-controls">
-      <input 
-        type="text" 
-        id="targetSelectorInput" 
-        list="monacoTargetList" 
-        class="target-input" 
-        placeholder="Target #id or [data-role=...]"
-      />
-      <datalist id="monacoTargetList"></datalist>
-
-      <button id="btnRescanTargets" class="btn btn-icon" type="button" title="Rescan page targets">
-        ↻
-      </button>
-
-      <select id="monacoPositionSelect" class="select-mini" title="Mount Position">
-        <option value="replace" selected>replace</option>
-        <option value="inside">inside</option>
-        <option value="prepend">prepend</option>
-      </select>
-    </div>
-
-    <div class="action-section">
-      <button id="btnFormatJson" class="btn btn-format" type="button" title="Format JSON">
-        Format
-      </button>
-      <button id="btnApplyToPage" class="btn btn-apply" type="button" title="Render directly into the page target">
-        ⚡ Render to DOM
-      </button>
-    </div>
+    <span class="brand-badge">KS Monaco</span>
+    <label class="schema-label" for="specSelect">Select JSON Spec:</label>
+    <select id="specSelect" class="schema-select">
+      <option value="" disabled selected>Loading schemas...</option>
+    </select>
+    <button id="btnShowJson" class="btn-show" type="button" title="Display selected JSON in editor">
+      Show JSON
+    </button>
+    <span id="statusIndicator" class="status-text">Loading catalog...</span>
   </header>
 
-  <!-- Monaco Editor Container -->
-  <div id="monacoContainer"></div>
+  <!-- Editor Workspace -->
+  <main class="editor-workspace">
+    <!-- Monaco container (used if CDN allows) -->
+    <div id="monacoContainer"></div>
 
-  <!-- Monaco Loader -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
+    <!-- Built-in high-performance syntax-highlighted editor (guaranteed to render 100% of the time) -->
+    <div class="built-in-editor" id="builtInEditor">
+      <div class="gutter" id="lineGutter">1</div>
+      <div class="code-container" id="codeContent" contenteditable="true" spellcheck="false">// Loading spec JSON...</div>
+    </div>
+  </main>
+
   <script src="editor.js"></script>
 </body>
 

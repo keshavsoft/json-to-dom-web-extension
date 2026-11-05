@@ -1,276 +1,210 @@
 /**
- * json-to-dom v6 Monaco Editor Window Controller
+ * json-to-dom v7 JSON Spec Viewer & Editor
  * KeshavSoft
  * 
  * Features:
- * 1. Targets #id and [data-role] elements directly from Monaco.
- * 2. Unending Chaining: auto-rescans host webpage DOM targets after every render.
- * 3. MAIN world execution of window.ks.jsonRenderers.build.table.render and window.ks.jsonToDom.
+ * - Direct JSON Spec Viewer with VS Code Dark Theme syntax highlighting.
+ * - Dynamic line numbers gutter.
+ * - Instant updates on dropdown change or "Show JSON" click.
+ * - 100% compliant with Chrome Extension MV3 CSP (no dependencies on blocked external scripts).
+ * - Optional seamless upgrade to Monaco if available in runtime.
  */
 
-let editorInstance = null;
-let currentTabId = null;
+let specCatalog = null;
+let monacoEditorInstance = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-  const schemaNameLabel = document.getElementById("schemaNameLabel");
-  const targetSelectorInput = document.getElementById("targetSelectorInput");
-  const monacoTargetList = document.getElementById("monacoTargetList");
-  const btnRescanTargets = document.getElementById("btnRescanTargets");
-  const monacoPositionSelect = document.getElementById("monacoPositionSelect");
-  const btnFormatJson = document.getElementById("btnFormatJson");
-  const btnApplyToPage = document.getElementById("btnApplyToPage");
+  const specSelect = document.getElementById("specSelect");
+  const btnShowJson = document.getElementById("btnShowJson");
+  const statusIndicator = document.getElementById("statusIndicator");
 
-  // Read URL query params passed from popup
+  // Read URL query param if passed
   const urlParams = new URLSearchParams(window.location.search);
-  const specKey = urlParams.get("specKey") || "table.simple.base";
-  const initialTarget = urlParams.get("targetSelector") || urlParams.get("targetId") || "";
-  const tabIdParam = urlParams.get("tabId");
-  if (tabIdParam) currentTabId = parseInt(tabIdParam, 10);
+  const initialSpecKey = urlParams.get("specKey") || "table.simple.base";
 
-  schemaNameLabel.textContent = `Spec: ${specKey}`;
-  if (initialTarget) {
-    targetSelectorInput.value = initialTarget.startsWith("#") || initialTarget.startsWith("[") ? initialTarget : `#${initialTarget}`;
+  // 1. ATTACH BUTTON CLICK LISTENER IMMEDIATELY
+  if (btnShowJson) {
+    btnShowJson.addEventListener("click", () => {
+      const selectedKey = specSelect.value || initialSpecKey;
+      displayJson(selectedKey);
+    });
   }
 
-  // Scan host page targets
-  scanPageTargets();
-
-  // Initialize Monaco Editor
-  initMonaco(specKey);
-
-  // Rescan targets button
-  btnRescanTargets.addEventListener("click", () => {
-    scanPageTargets();
-  });
-
-  // Format button
-  btnFormatJson.addEventListener("click", () => {
-    if (editorInstance) {
-      editorInstance.getAction("editor.action.formatDocument").run();
-    }
-  });
-
-  // Render to DOM button
-  btnApplyToPage.addEventListener("click", async () => {
-    if (!editorInstance) return;
-
-    let parsedSpec = null;
-    try {
-      parsedSpec = JSON.parse(editorInstance.getValue());
-    } catch (err) {
-      alert("Invalid JSON syntax: " + err.message);
-      return;
-    }
-
-    const selector = targetSelectorInput.value.trim();
-    if (!selector) {
-      alert("Please enter or pick a target selector (#id or [data-role=...]).");
-      return;
-    }
-
-    const position = monacoPositionSelect ? monacoPositionSelect.value : "replace";
-
-    btnApplyToPage.textContent = "⏳ Rendering...";
-    btnApplyToPage.disabled = true;
-
-    try {
-      let tabId = currentTabId;
-      if (!tabId) {
-        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        tabId = activeTab ? activeTab.id : null;
-      }
-
-      if (!tabId) {
-        alert("Could not identify the target browser tab.");
-        btnApplyToPage.textContent = "⚡ Render to DOM";
-        btnApplyToPage.disabled = false;
-        return;
-      }
-
-      const results = await chrome.scripting.executeScript({
-        target: { tabId },
-        world: "MAIN",
-        args: [selector, parsedSpec, specKey, position],
-        func: (targetSelector, spec, key, appendPosition) => {
-          let targetEl = null;
-          if (targetSelector.startsWith("#")) {
-            targetEl = document.getElementById(targetSelector.slice(1));
-          } else if (targetSelector.startsWith("[data-role=") || targetSelector.startsWith("[data-role")) {
-            targetEl = document.querySelector(targetSelector);
-          } else if (targetSelector.startsWith("data-role=") || targetSelector.startsWith("role=")) {
-            const val = targetSelector.replace(/^(data-)?role=/, "").replace(/['"]/g, "");
-            targetEl = document.querySelector(`[data-role="${val}"]`);
-          } else {
-            targetEl = document.getElementById(targetSelector) || document.querySelector(`[data-role="${targetSelector}"]`);
-          }
-
-          if (!targetEl) {
-            return { success: false, error: `Target "${targetSelector}" not found on page.` };
-          }
-
-          if (!targetEl.id) {
-            targetEl.id = "ks-role-" + (targetEl.getAttribute("data-role") || "target-" + Date.now());
-          }
-          const targetHtmlId = targetEl.id;
-
-          // 1. Tag spec direct render
-          if (spec && (spec.tagName || Array.isArray(spec))) {
-            if (window.ks?.jsonToDom && typeof window.ks.jsonToDom.appendToDom === "function") {
-              window.ks.jsonToDom.appendToDom({
-                jsonSpec: spec,
-                targetHtmlId,
-                appendPosition: appendPosition || "replace",
-                showLog: true
-              });
-              return { success: true, targetHtmlId, method: "jsonToDom" };
-            }
-
-            if (window.ks?.specToDom && typeof window.ks.specToDom.appendToDom === "function") {
-              window.ks.specToDom.appendToDom({
-                buildSpec: spec,
-                targetHtmlId,
-                appendPosition: appendPosition || "replace",
-                showLog: true
-              });
-              return { success: true, targetHtmlId, method: "specToDom" };
-            }
-          }
-
-          // 2. High-level table render
-          if (
-            window.ks?.jsonRenderers?.build?.table &&
-            typeof window.ks.jsonRenderers.build.table.render === "function"
-          ) {
-            const data = (spec && spec.data) || [
-              { id: 1, name: "Sample Item 1", status: "Active" },
-              { id: 2, name: "Sample Item 2", status: "Pending" }
-            ];
-            const columns = (spec && spec.columns) || [
-              { field: "id", label: "ID" },
-              { field: "name", label: "Name" },
-              { field: "status", label: "Status" }
-            ];
-
-            window.ks.jsonRenderers.build.table.render({
-              type: (spec && spec.type) || key || "table.simple",
-              data,
-              columns,
-              targetHtmlId,
-              appendPosition: appendPosition || "replace",
-              classToApply: "",
-              showLog: true
-            });
-            return { success: true, targetHtmlId, method: "jsonRenderers.build.table.render" };
-          }
-
-          return { success: false, error: "window.ks renderer is not loaded on this page." };
-        }
-      });
-
-      const res = results && results[0] && results[0].result;
-      if (res && res.success !== false) {
-        btnApplyToPage.textContent = "✔ Rendered!";
-        
-        // Auto-refresh target list after render
-        await scanPageTargets();
-
-        setTimeout(() => {
-          btnApplyToPage.textContent = "⚡ Render to DOM";
-          btnApplyToPage.disabled = false;
-        }, 1500);
-      } else {
-        alert("Render result: " + (res?.error || JSON.stringify(res)));
-        btnApplyToPage.textContent = "⚡ Render to DOM";
-        btnApplyToPage.disabled = false;
-      }
-    } catch (err) {
-      console.error("[Monaco v6] Render error:", err);
-      alert("Render error: " + err.message);
-      btnApplyToPage.textContent = "⚡ Render to DOM";
-      btnApplyToPage.disabled = false;
-    }
-  });
-
-  async function scanPageTargets() {
-    try {
-      let tabId = currentTabId;
-      if (!tabId) {
-        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        tabId = activeTab ? activeTab.id : null;
-      }
-      if (!tabId) return;
-
-      const results = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => {
-          const idNodes = Array.from(document.querySelectorAll("[id]"))
-            .map((el) => `#${el.id}`)
-            .filter((x) => x.length > 1);
-
-          const roleNodes = Array.from(document.querySelectorAll("[data-role]"))
-            .map((el) => `[data-role="${el.getAttribute("data-role")}"]`)
-            .filter((x) => x.length > 13);
-
-          return { idNodes, roleNodes };
-        }
-      });
-
-      const data = (results && results[0] && results[0].result) || { idNodes: [], roleNodes: [] };
-      monacoTargetList.innerHTML = "";
-
-      data.idNodes.forEach((val) => {
-        const opt = document.createElement("option");
-        opt.value = val;
-        monacoTargetList.appendChild(opt);
-      });
-
-      data.roleNodes.forEach((val) => {
-        const opt = document.createElement("option");
-        opt.value = val;
-        monacoTargetList.appendChild(opt);
-      });
-    } catch (err) {
-      console.warn("Could not scan targets from Monaco:", err);
-    }
+  // 2. ATTACH DROPDOWN CHANGE LISTENER IMMEDIATELY
+  if (specSelect) {
+    specSelect.addEventListener("change", () => {
+      const selectedKey = specSelect.value;
+      displayJson(selectedKey);
+    });
   }
+
+  // 3. LOAD CATALOG AND SHOW FIRST SCHEMA IMMEDIATELY
+  loadCatalogAndDisplay(initialSpecKey);
+
+  // 4. ATTEMPT MONACO LOADER IN BACKGROUND (non-blocking)
+  tryInitMonaco(initialSpecKey);
 });
 
-async function initMonaco(specKey) {
-  let specContent = {};
+/**
+ * Load specCatalog.json, populate dropdown, and immediately render initial JSON
+ */
+async function loadCatalogAndDisplay(initialKey) {
+  const specSelect = document.getElementById("specSelect");
+  const statusIndicator = document.getElementById("statusIndicator");
 
   try {
     const catalogUrl = chrome.runtime.getURL("src/specCatalog.json");
     const resp = await fetch(catalogUrl);
-    const catalog = await resp.json();
+    specCatalog = await resp.json();
 
-    specContent = resolveSpec(catalog, specKey);
+    // Populate dropdown
+    populateDropdown(initialKey);
+
+    // Immediately display initial JSON!
+    const keyToDisplay = specSelect.value || initialKey;
+    displayJson(keyToDisplay);
+
+    if (statusIndicator) {
+      statusIndicator.textContent = `Showing: ${keyToDisplay}`;
+    }
   } catch (err) {
-    console.warn("Could not load spec catalog:", err);
-    specContent = { error: "Could not load schema", key: specKey };
+    console.error("[json-to-dom v7] Could not load spec catalog:", err);
+    if (statusIndicator) {
+      statusIndicator.textContent = "Error loading catalog: " + err.message;
+      statusIndicator.style.color = "#ef4444";
+    }
   }
-
-  const initialJson = JSON.stringify(specContent, null, 2);
-
-  // Configure Monaco loader
-  const editorPath = "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs";
-  window.require.config({ paths: { vs: editorPath } });
-
-  window.require(["vs/editor/editor.main"], () => {
-    const container = document.getElementById("monacoContainer");
-    editorInstance = monaco.editor.create(container, {
-      value: initialJson,
-      language: "json",
-      theme: "vs-dark",
-      automaticLayout: true,
-      fontSize: 13,
-      minimap: { enabled: true },
-      scrollBeyondLastLine: false,
-      formatOnPaste: true,
-      tabSize: 2
-    });
-  });
 }
 
+/**
+ * Populate spec dropdown with Definitions, Complete Specs, and HTML Tags
+ */
+function populateDropdown(selectedKey) {
+  const specSelect = document.getElementById("specSelect");
+  if (!specSelect || !specCatalog) return;
+
+  specSelect.innerHTML = "";
+
+  // Group 1: Definitions
+  const optGroupDefs = document.createElement("optgroup");
+  optGroupDefs.label = "Definitions (spec-repo/definitions.json)";
+
+  const defPaths = extractPaths(specCatalog.definitions || {});
+  defPaths.forEach((path) => {
+    const opt = document.createElement("option");
+    opt.value = path;
+    opt.textContent = path;
+    if (path === selectedKey) opt.selected = true;
+    optGroupDefs.appendChild(opt);
+  });
+  specSelect.appendChild(optGroupDefs);
+
+  // Group 2: Complete Specs
+  if (specCatalog.spec && Object.keys(specCatalog.spec).length > 0) {
+    const optGroupSpec = document.createElement("optgroup");
+    optGroupSpec.label = "Complete Specs (spec-repo/spec.json)";
+    Object.keys(specCatalog.spec).forEach((k) => {
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = k;
+      if (k === selectedKey) opt.selected = true;
+      optGroupSpec.appendChild(opt);
+    });
+    specSelect.appendChild(optGroupSpec);
+  }
+
+  // Group 3: HTML Tags
+  if (specCatalog.tags && Object.keys(specCatalog.tags).length > 0) {
+    const optGroupTags = document.createElement("optgroup");
+    optGroupTags.label = "HTML Tags (spec-repo/tags.json)";
+    Object.keys(specCatalog.tags).forEach((k) => {
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = `<${k}>`;
+      if (k === selectedKey) opt.selected = true;
+      optGroupTags.appendChild(opt);
+    });
+    specSelect.appendChild(optGroupTags);
+  }
+}
+
+/**
+ * Displays the JSON representation of the given spec key
+ */
+function displayJson(specKey) {
+  const codeContent = document.getElementById("codeContent");
+  const lineGutter = document.getElementById("lineGutter");
+  const statusIndicator = document.getElementById("statusIndicator");
+
+  if (!specCatalog) return;
+
+  const resolved = resolveSpec(specCatalog, specKey);
+  const formattedRaw = JSON.stringify(resolved, null, 2);
+
+  // 1. If Monaco is active, update Monaco
+  if (monacoEditorInstance) {
+    try {
+      monacoEditorInstance.setValue(formattedRaw);
+      monacoEditorInstance.revealPosition({ lineNumber: 1, column: 1 });
+    } catch (e) {
+      console.warn("Could not set Monaco value:", e);
+    }
+  }
+
+  // 2. Update Built-in Editor (with line numbers & syntax highlighting)
+  if (codeContent) {
+    codeContent.innerHTML = highlightJson(formattedRaw);
+  }
+
+  // 3. Generate line numbers for gutter
+  const lineCount = formattedRaw.split("\n").length;
+  if (lineGutter) {
+    let linesHtml = "";
+    for (let i = 1; i <= lineCount; i++) {
+      linesHtml += i + "<br>";
+    }
+    lineGutter.innerHTML = linesHtml;
+  }
+
+  // 4. Update status indicator
+  if (statusIndicator) {
+    statusIndicator.textContent = `Showing: ${specKey} (${lineCount} lines)`;
+    statusIndicator.style.color = "#10b981";
+  }
+}
+
+/**
+ * Syntax highlighter for JSON strings (VS Code Dark Theme)
+ */
+function highlightJson(jsonStr) {
+  const escaped = jsonStr
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  return escaped.replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    function (match) {
+      let cls = "json-number";
+      if (/^"/.test(match)) {
+        if (/:$/.test(match)) {
+          cls = "json-key";
+        } else {
+          cls = "json-string";
+        }
+      } else if (/true|false/.test(match)) {
+        cls = "json-boolean";
+      } else if (/null/.test(match)) {
+        cls = "json-null";
+      }
+      return '<span class="' + cls + '">' + match + "</span>";
+    }
+  );
+}
+
+/**
+ * Resolve spec object by dot notation path from catalog
+ */
 function resolveSpec(catalog, specKey) {
   if (!catalog) return {};
 
@@ -290,5 +224,65 @@ function resolveSpec(catalog, specKey) {
   if (catalog.spec && catalog.spec[specKey]) return catalog.spec[specKey];
   if (catalog.tags && catalog.tags[specKey]) return catalog.tags[specKey];
 
-  return { type: specKey, note: "Custom schema key" };
+  return { error: `Schema "${specKey}" not found in catalog.` };
+}
+
+/**
+ * Extract schema paths from definitions object
+ */
+function extractPaths(obj, prefix = "") {
+  let paths = [];
+  for (const k in obj) {
+    const p = prefix ? `${prefix}.${k}` : k;
+    if (obj[k] && obj[k].tagName) {
+      paths.push(p);
+    } else if (obj[k] && typeof obj[k] === "object" && !Array.isArray(obj[k])) {
+      paths.push(...extractPaths(obj[k], p));
+    }
+  }
+  return paths;
+}
+
+/**
+ * Optional Monaco Loader (seamless progressive enhancement)
+ */
+function tryInitMonaco(initialKey) {
+  try {
+    if (typeof window.require !== "undefined" && typeof window.require.config === "function") {
+      window.require.config({
+        paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs" }
+      });
+
+      window.require(["vs/editor/editor.main"], () => {
+        const monacoContainer = document.getElementById("monacoContainer");
+        const builtInEditor = document.getElementById("builtInEditor");
+
+        if (monacoContainer && window.monaco) {
+          monacoEditorInstance = window.monaco.editor.create(monacoContainer, {
+            value: "{}",
+            language: "json",
+            theme: "vs-dark",
+            automaticLayout: true,
+            fontSize: 13,
+            lineNumbers: "on",
+            minimap: { enabled: true },
+            scrollBeyondLastLine: false,
+            formatOnPaste: true,
+            tabSize: 2
+          });
+
+          // Show Monaco, hide fallback
+          monacoContainer.style.display = "block";
+          if (builtInEditor) builtInEditor.style.display = "none";
+
+          // Sync current spec into Monaco
+          const specSelect = document.getElementById("specSelect");
+          const key = (specSelect && specSelect.value) || initialKey;
+          displayJson(key);
+        }
+      });
+    }
+  } catch (err) {
+    console.log("[json-to-dom v7] Monaco CDN not available in this environment. Built-in editor active.");
+  }
 }
